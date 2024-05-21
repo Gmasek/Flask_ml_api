@@ -29,8 +29,8 @@ def get_stocks_data(ticker:str,start:str,end:str)->pd.DataFrame:
     stock_data = yf.download(tickers=ticker,start=start,end=end)
     stock_data = stock_data.dropna()
     stock_data = pd.DataFrame(stock_data)
-    stock_sector = [yf.Ticker(ticker).info["sector"]]
-    stock_data["Sector"] = stock_sector
+    #stock_sector = str(yf.Ticker(ticker).info["sector"])
+    #stock_data["Sector"] = np.full(len(stock_data),stock_sector)
     return stock_data
 
 def calc_macd(data, len1,len2,len3):
@@ -71,9 +71,7 @@ def get_indicators(data):
     
     df["5SMA"] = df['Prev_close'].rolling(5).mean()
     df["10SMA"] = df['Prev_close'].rolling(10).mean()
-    df["20SMA"] = df['Prev_close'].rolling(20).mean()
     df["50SMA"] = df['Prev_close'].rolling(50).mean()
-    df["100SMA"] = df['Prev_close'].rolling(100).mean()
     df["200SMA"] = df['Prev_close'].rolling(200).mean()
     df["Move_direct"]= (1-df['Prev_Open'] / df["Prev_close"] )*100
     df["OBV"]=np.where(df['Prev_close'] > df['Prev_close'].shift(1), df['Prev_volume'], np.where(df['Prev_close'] < df['Prev_close'].shift(1), -df['Prev_volume'], 0)).cumsum()
@@ -99,12 +97,24 @@ def get_indicators(data):
     df['RSI_volume'] = calc_rsi(df['Prev_volume'],13)
     df["Target"] = df.rolling(2).apply(lambda x: x.iloc[1] > x.iloc[0])["Prev_close"]
     df.dropna()
-    print(df.tail(10))
+    return df
 
-get_stocks_data("AAPL","2000-01-01","2024-05-01")
-get_indicators(get_stocks_data("GOOG","2000-01-01","2024-05-01"))
+df = get_indicators(get_stocks_data("GOOG","2000-01-01","2024-05-01"))
 
-items = ["GOOG","AMZN","PG","XOM","JPM","JNJ","BA","AAPL","LIN","AMT","NEE"]
+def data_split(df:pd.DataFrame):
+    colum_indices = {name: i for i,name in enumerate(df.columns)}
+    n = len(df)
+    train_df = df[0:int(0.7*n)]
+    val_df = df[int(n*0.7):int(n*0.9)]
+    test_df = df[int(n*0.9):]
+    num_features = df.shape[1]
+    train_mean = train_df.mean()
+    train_std = train_df.std()
+    train_df = (train_df - train_mean) / train_std
+    val_df = (val_df - train_mean) / train_std
+    test_df = (test_df - train_mean) / train_std
+    df_std = (df - train_mean) / train_std
+    df_std = df_std.melt(var_name='Column', value_name='Normalized')
+    return train_df,val_df,test_df
 
-for item in items:
-    print(yf.Ticker(item).info["sector"])
+data_split(df=df)
