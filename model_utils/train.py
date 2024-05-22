@@ -52,6 +52,8 @@ if __name__ == "__main__":
                  metrics=[keras.metrics.MeanAbsoluteError()])
 
     val_performance = {}
+    
+    
     performance = {}
     val_performance['Baseline'] = baseline.evaluate(single_step_window.val, return_dict=True)
     performance['Baseline'] = baseline.evaluate(single_step_window.test, verbose=0, return_dict=True)
